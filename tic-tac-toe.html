@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🎯 Tic Tac Toe - Lawan Komputer</title>
+<style>
+  :root{
+    --bg:#070913;
+    --panel:#0b0f20;
+    --neon1:#6c5ce7;   /* ungu */
+    --neon2:#00d4ff;   /* biru */
+    --grid:#1a2244;
+    --text:#e9eeff;
+    --muted:#9fb2ff;
+    --win:#16ffa8;
+    --draw:#ffd166;
+    --shadow: 0 0 20px rgba(108,92,231,.35), 0 0 40px rgba(0,212,255,.25);
+  }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:
+      radial-gradient(1000px 700px at 15% -10%, rgba(108,92,231,.18), transparent 60%),
+      radial-gradient(900px 600px at 100% 0%, rgba(0,212,255,.18), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:3vh 2vw;
+  }
+
+  .wrap{
+    width:min(92vw,720px);
+    display:flex; flex-direction:column; gap:1.4rem; align-items:center;
+  }
+
+  .topbar{
+    width:100%; display:flex; align-items:center; justify-content:space-between;
+    gap:1rem;
+  }
+
+  h1{
+    margin:0; font-weight:800; letter-spacing:.3px;
+    font-size:clamp(20px, 2.6vw, 28px);
+    background:linear-gradient(90deg,var(--neon2),var(--neon1));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-shadow: 0 0 14px rgba(0,212,255,.25);
+  }
+
+  .sound{
+    display:flex; align-items:center; gap:.6rem;
+    border:1px solid #1c2852; border-radius:999px;
+    padding:.45rem .8rem; background:#0a0f1f; cursor:pointer; user-select:none;
+    box-shadow: var(--shadow); transition: transform .06s ease;
+  }
+  .sound:active{ transform: translateY(1px) }
+  .sound .dot{
+    width:10px;height:10px;border-radius:50%;
+    background:var(--draw); box-shadow:0 0 10px var(--draw);
+  }
+  .sound.on .dot{ background:#19ffa8; box-shadow:0 0 10px #19ffa8 }
+
+  .panel{
+    width:100%; background: linear-gradient(180deg, rgba(13,18,40,.9), rgba(10,14,30,.9));
+    border:1px solid #1a244b; border-radius:16px; padding:1rem 1rem 1.2rem;
+    box-shadow: var(--shadow);
+  }
+
+  .status{
+    text-align:center; color:var(--muted);
+    font-weight:600; letter-spacing:.3px; margin-bottom:.6rem;
+    min-height:1.6em;
+  }
+
+  /* Board */
+  .board-wrap{
+    width:100%;
+    display:flex; justify-content:center;
+  }
+  .board{
+    width:min(90vw, 70vh, 520px);
+    aspect-ratio:1/1;
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:10px;
+    background: linear-gradient(180deg, rgba(22,30,60,.7), rgba(12,18,36,.7));
+    border-radius:14px; padding:10px;
+    border:1px solid #1b2346;
+    box-shadow: inset 0 0 30px rgba(108,92,231,.08), 0 20px 60px rgba(0,0,0,.35);
+  }
+  .cell{
+    background: radial-gradient(120% 120% at 30% 20%, rgba(0,212,255,.14), rgba(108,92,231,.12) 45%, rgba(12,18,36,.7) 80%);
+    border:1px solid var(--grid);
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:900; letter-spacing:.5px;
+    font-size: clamp(34px, 9.5vw, 64px);
+    color:#cfe6ff; text-shadow: 0 0 10px rgba(0,212,255,.45);
+    cursor:pointer; user-select:none;
+    transition: transform .08s ease, box-shadow .2s ease, background .25s ease;
+    position:relative; overflow:hidden;
+  }
+  .cell:hover{ box-shadow: 0 0 18px rgba(0,212,255,.18) }
+  .cell.pop{ animation: pop .12s ease }
+  @keyframes pop{ from{transform:scale(.95)} to{transform:scale(1)} }
+
+  /* Win highlight beam */
+  .cell.win{
+    background: radial-gradient(130% 130% at 50% 40%, rgba(22,255,168,.18), rgba(108,92,231,.10) 50%, rgba(12,18,36,.75) 90%);
+    box-shadow: 0 0 30px rgba(22,255,168,.35), inset 0 0 30px rgba(22,255,168,.25);
+  }
+  .beam{
+    content:""; position:absolute; inset:-120% -20%;
+    background:linear-gradient(90deg, transparent, rgba(22,255,168,.35), transparent);
+    transform: rotate(35deg); animation: sweep 1.1s ease forwards;
+    pointer-events:none;
+  }
+  @keyframes sweep{ from{translate:-60% 0; opacity:.45} to{translate:60% 0; opacity:0} }
+
+  /* Result banner */
+  .result{
+    text-align:center; font-weight:800;
+    font-size:clamp(18px, 2.4vw, 24px);
+    margin-top:.6rem; min-height:1.6em;
+    opacity:0; transform: translateY(8px);
+    transition: .25s ease;
+  }
+  .result.show{ opacity:1; transform:none }
+  .result.win{ color:var(--win); text-shadow:0 0 12px rgba(22,255,168,.35) }
+  .result.lose{ color:#ff5b8a; text-shadow:0 0 12px rgba(255,91,138,.35) }
+  .result.draw{ color:var(--draw); text-shadow:0 0 12px rgba(255,209,102,.35) }
+
+  .actions{
+    display:flex; justify-content:center; margin-top:.6rem;
+  }
+  .again{
+    display:none; border:1px solid #213064; color:var(--text);
+    background:#0b1126; padding:.65rem 1.1rem; border-radius:12px; cursor:pointer;
+    font-weight:700; letter-spacing:.3px;
+    box-shadow: var(--shadow); transition: transform .08s ease;
+  }
+  .again:active{ transform: translateY(1px) }
+  .again.show{ display:inline-block }
+
+  /* Touch target sizing */
+  @media (pointer: coarse) {
+    .cell{ font-size: clamp(44px, 10vw, 68px) }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <h1>🎯 Tic Tac Toe - Lawan Komputer</h1>
+      <button id="soundBtn" class="sound on" aria-label="Toggle Audio">
+        <div class="dot"></div><span id="soundLabel">🔊</span>
+      </button>
+    </div>
+
+    <div class="panel">
+      <div id="status" class="status">Giliran kamu (X)</div>
+
+      <div class="board-wrap">
+        <div id="board" class="board" role="grid" aria-label="Papan Tic Tac Toe"></div>
+      </div>
+
+      <div id="result" class="result" aria-live="polite"></div>
+      <div class="actions">
+        <button id="again" class="again">Main Lagi</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  /*** ====== Audio (tanpa file eksternal) ======
+   * - Backsound lembut (synth pad) dengan WebAudio
+   * - SFX click & win dengan oscillator
+   * Autoplay diwajibkan setelah interaksi pertama (kebijakan browser).
+   */
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AudioCtx();
+  let masterGain = ctx.createGain(); masterGain.gain.value = .7; masterGain.connect(ctx.destination);
+
+  // Ambient pad
+  let musicGain = ctx.createGain(); musicGain.gain.value = .18; musicGain.connect(masterGain);
+  const padOsc1 = ctx.createOscillator(); padOsc1.type='sine'; padOsc1.frequency.value=164.81; // E3
+  const padOsc2 = ctx.createOscillator(); padOsc2.type='sine'; padOsc2.frequency.value=246.94; // B3
+  const padLFO = ctx.createOscillator(); padLFO.type='sine'; padLFO.frequency.value=.07;
+  const lfoGain = ctx.createGain(); lfoGain.gain.value = 0.06;
+  padLFO.connect(lfoGain); lfoGain.connect(musicGain.gain);
+  padOsc1.connect(musicGain); padOsc2.connect(musicGain);
+
+  let musicStarted = false;
+  function startMusic(){
+    if (musicStarted) return;
+    padOsc1.start(); padOsc2.start(); padLFO.start();
+    musicStarted = true;
+  }
+
+  function sfxClick(){
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.type='square'; o.frequency.value=520;
+    g.gain.value=.0; o.connect(g); g.connect(masterGain);
+    const now = ctx.currentTime;
+    g.gain.linearRampToValueAtTime(.22, now + .005);
+    g.gain.exponentialRampToValueAtTime(.0001, now + .09);
+    o.start(); o.stop(now + .1);
+  }
+  function sfxWin(){
+    // arpeggio kecil
+    const notes = [523.25,659.25,783.99,1046.5]; // C5 E5 G5 C6
+    notes.forEach((f,i)=>{
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type='sine'; o.frequency.value=f; g.gain.value=.0;
+      o.connect(g); g.connect(masterGain);
+      const t = ctx.currentTime + i*0.08;
+      g.gain.linearRampToValueAtTime(.28, t+0.01);
+      g.gain.exponentialRampToValueAtTime(.0001, t+0.25);
+      o.start(t); o.stop(t+0.26);
+    });
+  }
+
+  // Mute/Unmute
+  const soundBtn = document.getElementById('soundBtn');
+  const soundLabel = document.getElementById('soundLabel');
+  let soundOn = true;
+  function setSound(on){
+    soundOn = on;
+    soundBtn.classList.toggle('on', on);
+    soundLabel.textContent = on ? '🔊' : '🔇';
+    masterGain.gain.value = on ? .7 : 0.0;
+  }
+  soundBtn.addEventListener('click', async () => {
+    if (ctx.state === 'suspended') await ctx.resume();
+    startMusic();
+    setSound(!soundOn);
+  });
+
+  // Resume audio on first interaction anywhere
+  document.addEventListener('pointerdown', async () => {
+    if (ctx.state === 'suspended') await ctx.resume();
+    startMusic();
+  }, { once:true });
+
+  /*** ====== Game Logic ====== ***/
+  const boardEl = document.getElementById('board');
+  const statusEl = document.getElementById('status');
+  const resultEl = document.getElementById('result');
+  const againBtn = document.getElementById('again');
+
+  const HUMAN = 'X';
+  const AI = 'O';
+  let board = Array(9).fill('');
+  let gameOver = false;
+
+  // Build cells
+  for (let i=0;i<9;i++){
+    const c = document.createElement('button');
+    c.className='cell'; c.setAttribute('role','gridcell'); c.setAttribute('aria-label', 'Kotak ' + (i+1));
+    c.dataset.index = i;
+    c.addEventListener('click', onHumanMove, { passive:true });
+    boardEl.appendChild(c);
+  }
+
+  function onHumanMove(e){
+    if (gameOver) return;
+    const idx = +e.currentTarget.dataset.index;
+    if (board[idx]) return;
+    board[idx] = HUMAN;
+    paint();
+    if (soundOn) sfxClick();
+
+    const win = checkWin(board);
+    if (win){ finish('Kamu Menang! 🎉', 'win', win.line); return; }
+    if (isFull(board)){ finish('Seri! 😶', 'draw'); return; }
+
+    // AI move (small delay for feel)
+    statusEl.textContent = 'Giliran komputer...';
+    setTimeout(()=>{
+      aiMove();
+      const win2 = checkWin(board);
+      if (win2){ finish('Komputer Menang! 🤖', 'lose', win2.line); return; }
+      if (isFull(board)){ finish('Seri! 😶', 'draw'); return; }
+      statusEl.textContent = 'Giliran kamu (X)';
+    }, 180);
+  }
+
+  function aiMove(){
+    // 1) Immediate win
+    const winIdx = findWinningMove(board, AI);
+    if (winIdx !== -1){ board[winIdx] = AI; paintPop(winIdx); return; }
+    // 2) Block human win
+    const blockIdx = findWinningMove(board, HUMAN);
+    if (blockIdx !== -1){ board[blockIdx] = AI; paintPop(blockIdx); return; }
+    // 3) Center
+    if (!board[4]){ board[4] = AI; paintPop(4); return; }
+    // 4) Corners
+    const corners = [0,2,6,8].filter(i=>!board[i]);
+    if (corners.length){ const pick = bestByMinimax(corners); board[pick]=AI; paintPop(pick); return; }
+    // 5) Sides
+    const sides = [1,3,5,7].filter(i=>!board[i]);
+    if (sides.length){ const pick = bestByMinimax(sides); board[pick]=AI; paintPop(pick); return; }
+  }
+
+  // Evaluate using shallow minimax for tiebreaking
+  function bestByMinimax(options){
+    let best = options[0], bestScore = -Infinity;
+    for (const idx of options){
+      const temp = board.slice(); temp[idx]=AI;
+      const score = minimax(temp, false, 0);
+      if (score > bestScore){ bestScore = score; best = idx; }
+    }
+    return best;
+  }
+
+  // Minimax with depth cap (fast for 3x3)
+  function minimax(state, isMax, depth){
+    const win = checkWin(state);
+    if (win) return win.player===AI ? 10 - depth : depth - 10;
+    if (isFull(state)) return 0;
+    if (depth >= 5) return 0; // cap
+
+    if (isMax){
+      let best = -Infinity;
+      for (let i=0;i<9;i++) if (!state[i]){
+        state[i]=AI;
+        best = Math.max(best, minimax(state, false, depth+1));
+        state[i]='';
+      }
+      return best;
+    } else {
+      let best = Infinity;
+      for (let i=0;i<9;i++) if (!state[i]){
+        state[i]=HUMAN;
+        best = Math.min(best, minimax(state, true, depth+1));
+        state[i]='';
+      }
+      return best;
+    }
+  }
+
+  function findWinningMove(b, p){
+    for (let i=0;i<9;i++){
+      if (!b[i]){ b[i]=p; if (checkWin(b)) { b[i]=''; return i; } b[i]=''; }
+    }
+    return -1;
+  }
+
+  function isFull(b){ return b.every(Boolean); }
+
+  const LINES = [
+    [0,1,2],[3,4,5],[6,7,8], // rows
+    [0,3,6],[1,4,7],[2,5,8], // cols
+    [0,4,8],[2,4,6]          // diags
+  ];
+  function checkWin(b){
+    for (const line of LINES){
+      const [a,c,d] = line;
+      if (b[a] && b[a]===b[c] && b[a]===b[d]) return { player:b[a], line };
+    }
+    return null;
+  }
+
+  /*** ====== UI Paint ====== ***/
+  function paint(){
+    [...boardEl.children].forEach((cell,i)=>{
+      cell.textContent = board[i];
+    });
+  }
+  function paintPop(i){
+    const cell = boardEl.children[i];
+    cell.textContent = board[i];
+    cell.classList.remove('pop'); void cell.offsetWidth; // restart animation
+    cell.classList.add('pop');
+    if (soundOn) sfxClick();
+  }
+
+  function finish(text, mode, line){
+    gameOver = true;
+    resultEl.className = 'result show ' + (mode==='win' ? 'win' : mode==='lose' ? 'lose' : 'draw');
+    resultEl.textContent = text;
+    statusEl.textContent = '';
+    againBtn.classList.add('show');
+    if (mode!=='draw' && line){
+      line.forEach(i=>{
+        const c = boardEl.children[i];
+        c.classList.add('win');
+        const beam = document.createElement('div'); beam.className='beam';
+        c.appendChild(beam);
+      });
+      if (soundOn) sfxWin();
+    }
+  }
+
+  againBtn.addEventListener('click', () => {
+    board = Array(9).fill('');
+    gameOver = false;
+    resultEl.className = 'result'; resultEl.textContent='';
+    againBtn.classList.remove('show');
+    statusEl.textContent = 'Giliran kamu (X)';
+    [...boardEl.children].forEach(c=>{ c.textContent=''; c.classList.remove('win'); c.querySelectorAll('.beam').forEach(b=>b.remove()); });
+  });
+})();
+</script>
+</body>
+</html>
+```0
