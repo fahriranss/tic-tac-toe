@@ -74,10 +74,7 @@
   }
 
   /* Board */
-  .board-wrap{
-    width:100%;
-    display:flex; justify-content:center;
-  }
+  .board-wrap{ width:100%; display:flex; justify-content:center; }
   .board{
     width:min(90vw, 70vh, 520px);
     aspect-ratio:1/1;
@@ -129,9 +126,7 @@
   .result.lose{ color:#ff5b8a; text-shadow:0 0 12px rgba(255,91,138,.35) }
   .result.draw{ color:var(--draw); text-shadow:0 0 12px rgba(255,209,102,.35) }
 
-  .actions{
-    display:flex; justify-content:center; margin-top:.6rem;
-  }
+  .actions{ display:flex; justify-content:center; margin-top:.6rem; }
   .again{
     display:none; border:1px solid #213064; color:var(--text);
     background:#0b1126; padding:.65rem 1.1rem; border-radius:12px; cursor:pointer;
@@ -172,11 +167,7 @@
 
 <script>
 (() => {
-  /*** ====== Audio (tanpa file eksternal) ======
-   * - Backsound lembut (synth pad) dengan WebAudio
-   * - SFX click & win dengan oscillator
-   * Autoplay diwajibkan setelah interaksi pertama (kebijakan browser).
-   */
+  /*** ====== Audio (WebAudio, tanpa file eksternal) ====== ***/
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   const ctx = new AudioCtx();
   let masterGain = ctx.createGain(); masterGain.gain.value = .7; masterGain.connect(ctx.destination);
@@ -207,7 +198,7 @@
     o.start(); o.stop(now + .1);
   }
   function sfxWin(){
-    // arpeggio kecil
+    // Arpeggio kemenangan
     const notes = [523.25,659.25,783.99,1046.5]; // C5 E5 G5 C6
     notes.forEach((f,i)=>{
       const o = ctx.createOscillator(); const g = ctx.createGain();
@@ -235,8 +226,7 @@
     startMusic();
     setSound(!soundOn);
   });
-
-  // Resume audio on first interaction anywhere
+  // Autoplay setelah interaksi pertama
   document.addEventListener('pointerdown', async () => {
     if (ctx.state === 'suspended') await ctx.resume();
     startMusic();
@@ -274,7 +264,7 @@
     if (win){ finish('Kamu Menang! 🎉', 'win', win.line); return; }
     if (isFull(board)){ finish('Seri! 😶', 'draw'); return; }
 
-    // AI move (small delay for feel)
+    // AI move (delay biar kerasa natural)
     statusEl.textContent = 'Giliran komputer...';
     setTimeout(()=>{
       aiMove();
@@ -286,23 +276,23 @@
   }
 
   function aiMove(){
-    // 1) Immediate win
+    // 1) Menang langsung
     const winIdx = findWinningMove(board, AI);
     if (winIdx !== -1){ board[winIdx] = AI; paintPop(winIdx); return; }
-    // 2) Block human win
+    // 2) Blok kemenangan lawan
     const blockIdx = findWinningMove(board, HUMAN);
     if (blockIdx !== -1){ board[blockIdx] = AI; paintPop(blockIdx); return; }
-    // 3) Center
+    // 3) Tengah
     if (!board[4]){ board[4] = AI; paintPop(4); return; }
-    // 4) Corners
+    // 4) Sudut
     const corners = [0,2,6,8].filter(i=>!board[i]);
     if (corners.length){ const pick = bestByMinimax(corners); board[pick]=AI; paintPop(pick); return; }
-    // 5) Sides
+    // 5) Sisi
     const sides = [1,3,5,7].filter(i=>!board[i]);
     if (sides.length){ const pick = bestByMinimax(sides); board[pick]=AI; paintPop(pick); return; }
   }
 
-  // Evaluate using shallow minimax for tiebreaking
+  // Evaluasi ringan dengan minimax sebagai tie-breaker
   function bestByMinimax(options){
     let best = options[0], bestScore = -Infinity;
     for (const idx of options){
@@ -313,12 +303,12 @@
     return best;
   }
 
-  // Minimax with depth cap (fast for 3x3)
+  // Minimax depth-capped (cepat untuk 3x3)
   function minimax(state, isMax, depth){
     const win = checkWin(state);
     if (win) return win.player===AI ? 10 - depth : depth - 10;
     if (isFull(state)) return 0;
-    if (depth >= 5) return 0; // cap
+    if (depth >= 5) return 0; // batasi
 
     if (isMax){
       let best = -Infinity;
@@ -370,17 +360,20 @@
   function paintPop(i){
     const cell = boardEl.children[i];
     cell.textContent = board[i];
-    cell.classList.remove('pop'); void cell.offsetWidth; // restart animation
+    cell.classList.remove('pop'); void cell.offsetWidth; // restart anim
     cell.classList.add('pop');
     if (soundOn) sfxClick();
   }
 
   function finish(text, mode, line){
     gameOver = true;
-    resultEl.className = 'result show ' + (mode==='win' ? 'win' : mode==='lose' ? 'lose' : 'draw');
+    document.activeElement && document.activeElement.blur?.();
+    const cls = mode==='win' ? 'win' : mode==='lose' ? 'lose' : 'draw';
+    resultEl.className = 'result show ' + cls;
     resultEl.textContent = text;
     statusEl.textContent = '';
     againBtn.classList.add('show');
+
     if (mode!=='draw' && line){
       line.forEach(i=>{
         const c = boardEl.children[i];
